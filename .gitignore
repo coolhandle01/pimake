@@ -1,0 +1,7 @@
+# working folders
+workspace/**/*
+
+# development artifacts 
+conf/pimake.local
+conf/pimake.test
+test.log

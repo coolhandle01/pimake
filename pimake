@@ -1,0 +1,12 @@
+#!/bin/bash
+
+if [ -f "script/$1.sh" ]; then
+	command=$1
+	shift
+	./script/$command.sh $@
+else
+	echo \# command $1 not recognised
+	exit 1
+fi
+
+exit 0
