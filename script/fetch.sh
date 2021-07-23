@@ -8,32 +8,28 @@ header "$0"
 # verify the checksum of the image
 #
 
-if [ "$1" = "--source-url" ]; then
-    echo \# using $2
-    url=$2
-fi
-
-image_chk="$source_image_sha $package"
+image_chk="$source_image_hash_expected  $package"
 
 if [ ! -f "$package" ]; then
-    echo \# downloading $package
-    echo \# from $url
-    curl $url -L -o $package
-    echo \#
+    msg "downloading $package"
+    curl $source_image_url/$source_image_archive -L -o $package
+
+    msg "downloading $package_checksum"
+    curl $source_image_url/$source_image_hash -L -o $package_checksum
 else
-    echo \# found existing $package
+    msg "found existing $package"
 fi
 
-echo \# verifying $package
-sha256sum $package > $package_checksum
-checksum=$(cat $package_checksum)
+msg "verifying $package.."
+sha256sum $package > $package_checksum.test
+checksum=$(cat $package_checksum.test)
 
 if [ "$image_chk" = "$checksum" ]; then
-    echo \# - OK
+    okmsg "OK"
 else
-    echo \# - FAILED
-    echo \#   $checksum
-    echo \#   $image_chk
+    err "FAILED"
+    msg "calculated: $checksum"
+    msg "cached: $image_chk"
 fi
 
 exit 0

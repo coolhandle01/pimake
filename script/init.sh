@@ -13,5 +13,6 @@ mkdir -p $workspace_dir/package
 
 echo \# creating local pimake configuration file..
 cp conf/pimake.conf conf/pimake.local
+cp conf/pimake.conf conf/pimake.conf.test
 
 exit 0
