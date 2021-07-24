@@ -7,14 +7,14 @@ header "$0"
 
 target_disk=$1
 if [ -z $1 ]; then
-	echo \# Sorry, no target disk was specified.
+	errr "no target disk was specified."
 	exit 1
 fi
 
 #
 # burn the packed raspbian image
 # 
-echo \# writing $build to $target_disk
+msg "writing $build to $target_disk"
 dd if=$build of=$target_disk bs=4M conv=fsync status=progress
 
 exit 0

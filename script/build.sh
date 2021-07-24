@@ -19,13 +19,13 @@ check_error
 
 ssh_configure_enabled=$(cfg_read conf/pimake.local ssh_configure_enabled)
 if [ $ssh_configure_enabled -eq 1 ]; then
-    echo \# enable ssh on boot
+    msg "enable ssh on boot"
     touch $target_ssh
 fi
 
 opengl_activate_enabled=$(cfg_read conf/pimake.local opengl_activate_enabled)
 if [ $opengl_activate_enabled -eq 1 ]; then
-    echo \# activate the GL driver
+    msg "activate the GL driver"
     echo -e "\n# Activate the GL driver" >> $target_conf
     echo -e "dtoverlay=vc4-kms-v3d" >> $target_conf
 fi
@@ -33,7 +33,7 @@ fi
 hdmi_install_enabled=$(cfg_read conf/pimake.local hdmi_install_enabled)
 hdmi_cvt=$(cfg_read conf/pimake.local hdmi_cvt)
 if [ $hdmi_install_enabled -eq 1 ]; then
-    echo \# configure HDMI
+    msg "configure HDMI"
     echo -e "\n# Configure touchscreen" >> $target_conf
     echo -e "hdmi_group=2" >> $target_conf
     echo -e "hdmi_mode=1" >> $target_conf
@@ -46,7 +46,7 @@ unmount_vfat
 mount_ext4
 check_error
 
-echo \# install pimake deploy scripts to /opt/pimake
+msg "install pimake deploy scripts to /opt/pimake"
 mkdir -p $target_root/opt/pimake
 cp deploy/* $target_root/opt/pimake
 

@@ -12,22 +12,22 @@ source script/common/util.sh
 
 function header() {
     local filename=$(basename -- "$1")
-    echo -e "# ${CYAN}${BOLD}$source_image_distro: ${filename%%.*}${NC}${NORM}"
+    echo -e "# ${CYAN}${BOLD}${filename%%.*}${NC}${NORM}"
 }
 function title () {
-    echo -e "#${RED}${BOLD}$source_image_distro: $1${NC}${NORM}"
+    echo -e "# ${WHITE}${BOLD}$1${NC}${NORM}"
 }
 function errr () {
-    echo -e "#${RED}${BOLD}$source_image_distro: ERROR $?${NC}${NORM}"
+    echo -e "# ${RED}${BOLD}$1${NC}${NORM}"
 }
 function warn() {
-    echo -e "# ${YELLOW}${BOLD}$source_image_distro: $1${NC}${NORM}"
+    echo -e "# ${YELLOW}${BOLD}$1${NC}${NORM}"
 }
 function msg() {
-    echo -e "# ${WHITE}$source_image_distro: $1${NC}"
+    echo -e "# ${WHITE}$1${NC}"
 }
 function okmsg() {
-    echo -e "# ${GREEN}${BOLD}$source_image_distro: $1${NC}${NORM}"
+    echo -e "# ${GREEN}${BOLD}$1${NC}${NORM}"
 }
 
 
@@ -89,6 +89,8 @@ workspace_dir=$(cfg_read conf/pimake.local workspace_dir)
 # the source package from image_url
 package=$workspace_dir/package/$source_image_archive
 package_checksum=$workspace_dir/package/$source_image_hash
+package_curl_log=$workspace_dir/package/$source_image_archive.log
+package_checksum_curl_log=$workspace_dir/package/$source_image_archive_hash.log
 
 # the output .zip for flashing to your SD
 build=$workspace_dir/build/$source_image_archive
