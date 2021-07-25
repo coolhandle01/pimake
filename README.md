@@ -29,7 +29,7 @@ The following modifications to the Raspbian image are all disabled by default in
 
 ### Deployment
 
-Use the `rip` command, or something like Etcher to flash the .zip at `<repo>/workspace/build` to your SD card, boot the Pi with a display and keyboard connected, and log in as the default pi user.
+Use the `burn` command, or something like Etcher to flash the .zip at `<repo>/workspace/build` to your SD card, boot the Pi with a display and keyboard connected, and log in as the default pi user.
 
 Run the scripts in /opt/pimake ..
 ```bash
@@ -52,5 +52,3 @@ pi@raspberrypi: $ sudo rm -rf /opt/pimake
 [Tinker's blog post](https://www.tinker.sh/kde-plamo-rpi/) suggests some milestones along the journey to the goal of making a FOSSH smartphone concept. It also demonstrated how to get KDE Plasma working on a Raspberry Pi, giving a phone-like interface and touch input to Raspbian. 
 
 This project was started inpired by that blog, as it was something I'd also considered, and I wanted to automate the steps outlined there. Since then, [Pine64](https://www.pine64.org/pinephone/) has been invented - and they make devices similar to the Raspberry-Pi too.
-
-I've
