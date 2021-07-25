@@ -12,7 +12,7 @@ if [ "$1" = "-f" ] || [ "$1" = "--fresh" ]; then
   msg "clean up packages"
   rm -rf $workspace_dir/package/*
 
-  msg "refreshing pimake.local"
+  msg "clean up local configuration file"
   rm -f conf/pimake.local
   cp conf/pimake.conf conf/pimake.local
 fi

@@ -11,6 +11,5 @@ mkdir -p $workspace_dir/package
 
 msg "creating local configuration file"
 cp conf/pimake.conf conf/pimake.local
-cp conf/pimake.conf conf/pimake.test
 
 exit 0
