@@ -3,9 +3,6 @@ source script/common/version.sh
 
 header "$0"
 
-title "https://github.com/coolhandle01/pimake"
-title "$version"
-
 msg "creating workspace"
 mkdir -p $workspace_dir/build
 mkdir -p $workspace_dir/img

@@ -21,8 +21,8 @@ else
 fi
 
 msg "verifying $package.."
-sha256sum $package > $package_checksum.test
-checksum=$(cat $package_checksum.test)
+sha256sum $package > $package_checksum
+checksum=$(cat $package_checksum)
 
 if [ "$image_chk" = "$checksum" ]; then
     okmsg "OK"

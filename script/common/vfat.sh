@@ -4,7 +4,7 @@ source script/common/version.sh
 #
 # handle vfat partition mounting
 #
-
+## need to get offsets from index.conf
 function mount_vfat() {
     msg "mount $mount/vfat"
     mkdir -p $mount/vfat
