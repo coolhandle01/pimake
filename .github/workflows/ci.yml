@@ -33,22 +33,46 @@ jobs:
         run: ./pimake init
 
   pipeline:
-    name: Image pipeline
+    name: Build ${{ matrix.distro }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: [raspbian-lite, raspbian]
     steps:
       - uses: actions/checkout@v4
+
       - name: init
-        run: ./pimake init
+        run: |
+          ./pimake init
+          sed -i "s/^source_image_distro=.*/source_image_distro=${{ matrix.distro }}/" conf/pimake.local
+
       - name: Cache image package
         uses: actions/cache@v4
         with:
           path: workspace/package
-          key: image-${{ hashFiles('conf/distro/raspbian-lite/index.conf') }}
+          key: image-${{ matrix.distro }}-${{ hashFiles(format('conf/distro/{0}/index.conf', matrix.distro)) }}
+
       - name: fetch
         run: ./pimake fetch
+
       - name: unpack
         run: ./pimake unpack
+
       - name: build
         run: sudo ./pimake build
+
       - name: pack
         run: ./pimake pack
+
+      - name: get archive name
+        id: image
+        run: |
+          source "conf/distro/${{ matrix.distro }}/index.conf"
+          echo "archive=${source_image_archive}" >> "$GITHUB_OUTPUT"
+
+      - name: upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.image.outputs.archive }}
+          path: workspace/build/${{ steps.image.outputs.archive }}
