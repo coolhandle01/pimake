@@ -11,10 +11,16 @@ header "$0"
 
 check_user root
 
+cleanup() {
+    [ -n "$LODEV" ] && losetup -d "$LODEV"
+}
+trap cleanup EXIT
+
 wpa_conf=$target_root/etc/wpa_supplicant/wpa_supplicant.conf
 wvdial_conf=$target_root/etc/wvdial.conf
 
-# fdisk -l $image
+LODEV=$(losetup -fP --show "$image")
+check_error
 
 mount_vfat
 check_error
