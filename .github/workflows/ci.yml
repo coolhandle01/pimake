@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
+      - name: Lint scripts
+        run: |
+          shellcheck -x -P . pimake
+          find . -name "*.sh" -not -path "./.git/*" -print0 | xargs -0 shellcheck -x -P .
+
+  dispatcher:
+    name: Dispatcher
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: bare invocation prints usage
+        run: ./pimake
+      - name: --help prints usage
+        run: ./pimake --help
+      - name: unknown command exits 1
+        run: '! ./pimake badcmd'
+      - name: init
+        run: ./pimake init
+
+  pipeline:
+    name: Image pipeline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: init
+        run: ./pimake init
+      - name: Cache image package
+        uses: actions/cache@v4
+        with:
+          path: workspace/package
+          key: image-${{ hashFiles('conf/distro/raspbian-lite/index.conf') }}
+      - name: fetch
+        run: ./pimake fetch
+      - name: unpack
+        run: ./pimake unpack
+      - name: build
+        run: sudo ./pimake build
+      - name: pack
+        run: ./pimake pack
