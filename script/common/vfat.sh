@@ -1,5 +1,5 @@
 #!/bin/bash
-source script/common/version.sh
+source script/common/common.sh
 
 #
 # handle vfat partition mounting

@@ -1,12 +1,34 @@
 #!/bin/bash
 
-if [ -f "script/$1.sh" ]; then
-	command=$1
-	shift
-	./script/$command.sh $@
-else
-	echo \# command $1 not recognised
-	exit 1
-fi
+PIMAKE_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-exit 0
+usage() {
+    echo "Usage: pimake <command> [args]"
+    echo ""
+    echo "Commands:"
+    echo "  init     Initialize workspace directories"
+    echo "  fetch    Download and verify image"
+    echo "  unpack   Extract image archive"
+    echo "  build    Mount and configure image (requires sudo)"
+    echo "  pack     Recompress image"
+    echo "  burn     Flash image to disk"
+    echo "  rip      Extract image from existing disk"
+    echo "  clean    Remove build artifacts (--fresh to reset all)"
+}
+
+case "$1" in
+    init|fetch|unpack|build|pack|burn|rip|clean)
+        command=$1
+        shift
+        cd "$PIMAKE_DIR"
+        "$PIMAKE_DIR/script/$command.sh" "$@"
+        ;;
+    -h|--help|"")
+        usage
+        ;;
+    *)
+        echo "pimake: unknown command '$1'" >&2
+        echo "Run 'pimake --help' for usage." >&2
+        exit 1
+        ;;
+esac
