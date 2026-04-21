@@ -7,7 +7,7 @@ header "$0"
 # unpack the raspian image
 #
 
-msg "decompressing $build"
-unzip $package -d $workspace_dir/img
+msg "decompressing $package"
+unzip "$package" -d "$workspace_dir/img"
 
 exit 0

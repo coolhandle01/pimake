@@ -12,7 +12,7 @@ if [ "$(whoami)" != "root" ]; then
 fi
 
 deploy=$1
-if [ -z $deploy ]; then
+if [ -z "$deploy" ]; then
 	echo \# Sorry, no username provided.
 	exit 1
 fi
@@ -34,40 +34,40 @@ echo \# - generate randomish password for root
 newrootpassword=$(date +%s | sha256sum | base64 | head -c 12 ; echo)
 echo "root:$newrootpassword" | chpasswd
 
-echo \# configure $deploy user
-useradd $deploy
+echo \# configure "$deploy" user
+useradd "$deploy"
 
-echo \# - add $deploy user to sudoers group
-usermod -aG sudo $deploy
+echo \# - add "$deploy" user to sudoers group
+usermod -aG sudo "$deploy"
 
-echo \# - generate randomish password for $deploy
+echo \# - generate randomish password for "$deploy"
 newpassword=$(date +%s | sha256sum | base64 | head -c 12 ; echo)
 echo "$deploy:$newpassword" | chpasswd
 
-echo \# - generate user environment for $deploy
-mkdir -p /home/$deploy/.ssh
-touch /home/$deploy/.ssh/authorized_keys
-chmod 700 /home/$deploy/.ssh
-chmod 600 /home/$deploy/.ssh/authorized_keys
-chmod -R go= /home/$deploy
-chown $deploy:$deploy /home/$deploy -R
+echo \# - generate user environment for "$deploy"
+mkdir -p "/home/$deploy/.ssh"
+touch "/home/$deploy/.ssh/authorized_keys"
+chmod 700 "/home/$deploy/.ssh"
+chmod 600 "/home/$deploy/.ssh/authorized_keys"
+chmod -R go= "/home/$deploy"
+chown "$deploy":"$deploy" "/home/$deploy" -R
 
 echo \#
 echo \# THIS IS YOUR USER PASSWORD, DO NOT LOSE IT:
-echo \# $newpassword
-echo \#	- you will need to remember it, just store it somewhere
-echo \#   secure until you change it later - this password will 
+echo \# "$newpassword"
+echo \# - you will need to remember it, just store it somewhere
+echo \#   secure until you change it later - this password will
 echo \#   only be needed for the ability to log in or use sudo.
 echo \#
 echo \# THIS IS YOUR ROOT PASSWORD, DO NOT LOSE IT:
-echo \# $newrootpassword
-echo \#	- you won’t need to remember it, just store it somewhere
+echo \# "$newrootpassword"
+echo "# - you won't need to remember it, just store it somewhere"
 echo \#   secure - this password will only be needed if you lose
 echo \#   the ability to log in over ssh or lose your sudo password.
 echo \#
 echo \# TO PROVISION SSH ACCESS:
-echo \# ssh-keygen -f \~/.ssh/keys/$HOSTNAME/$deploy -t rsa -b 4096
-echo \# ssh-copy-id -i \~/.ssh/keys/$HOSTNAME/$deploy $deploy@$HOSTNAME
+echo \# ssh-keygen -f \~/.ssh/keys/"$HOSTNAME"/"$deploy" -t rsa -b 4096
+echo \# ssh-copy-id -i \~/.ssh/keys/"$HOSTNAME"/"$deploy" "$deploy"@"$HOSTNAME"
 echo \#
 echo \# you should shutdown -r now
 

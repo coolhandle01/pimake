@@ -20,7 +20,7 @@ case "$1" in
     init|fetch|unpack|build|pack|burn|rip|clean)
         command=$1
         shift
-        cd "$PIMAKE_DIR"
+        cd "$PIMAKE_DIR" || exit
         "$PIMAKE_DIR/script/$command.sh" "$@"
         ;;
     -h|--help|"")

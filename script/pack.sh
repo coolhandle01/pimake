@@ -8,10 +8,9 @@ header "$0"
 #
 
 msg "compressing $image to $build"
-zip -j $build $workspace_dir/img/*
+zip -j "$build" "$workspace_dir/img/"*
 
 msg "generating SHA256 for $build"
-sha256sum $build > $build_checksum
-checksum=$(cat $build_checksum)
+sha256sum "$build" > "$build_checksum"
 
 exit 0
