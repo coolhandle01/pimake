@@ -26,17 +26,18 @@ fi
 
 if [ "$opengl_activate_enabled" -eq 1 ]; then
     title "configure the GL driver"
-    echo -e "\n# Activate the GL driver" >> "$target_conf"
-    echo -e "dtoverlay=vc4-kms-v3d" >> "$target_conf"
+    { echo -e "\n# Activate the GL driver"; echo "dtoverlay=vc4-kms-v3d"; } >> "$target_conf"
 fi
 
 if [ "$hdmi_install_enabled" -eq 1 ]; then
     title "configure HDMI"
-    echo -e "\n# Configure touchscreen" >> "$target_conf"
-    echo -e "hdmi_group=2" >> "$target_conf"
-    echo -e "hdmi_mode=1" >> "$target_conf"
-    echo -e "hdmi_mode=87" >> "$target_conf"
-    echo -e "hdmi_cvt $hdmi_cvt" >> "$target_conf"
+    {
+        echo -e "\n# Configure touchscreen"
+        echo "hdmi_group=2"
+        echo "hdmi_mode=1"
+        echo "hdmi_mode=87"
+        echo "hdmi_cvt $hdmi_cvt"
+    } >> "$target_conf"
 fi
 
 unmount_vfat
@@ -54,34 +55,36 @@ fi
 
 if [ "$wpa_network_enabled" -eq 1 ]; then
     title "configure WiFi"
-
 #    mkdir -p $target_root/etc/wpa_supplicant
 #    echo "ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev" >> $wpa_conf
 #    echo "update_config=1" >> $wpa_conf
-    echo "country=$wpa_network_locale" >> "$wpa_conf"
-    echo "network={" >> "$wpa_conf"
-    echo "    scan_ssid=1" >> "$wpa_conf"
-    echo "    ssid=$wpa_network_ssid" >> "$wpa_conf"
-    echo "    psk=$wpa_network_password" >> "$wpa_conf"
-    echo "}" >> "$wpa_conf"
+    {
+        echo "country=$wpa_network_locale"
+        echo "network={"
+        echo "    scan_ssid=1"
+        echo "    ssid=$wpa_network_ssid"
+        echo "    psk=$wpa_network_password"
+        echo "}"
+    } >> "$wpa_conf"
 fi
 
 if [ "$gsm_network_enabled" -eq 1 ]; then
     title "configure GSM"
-
     touch "$wvdial_conf"
-    echo "[Dialer $gsm_network_provider]" >> "$wvdial_conf"
-    echo "Init1 = ATZ" >> "$wvdial_conf"
-    echo "Init2 = ATQ0 V1 E1 S0=0 &C1 &D2 +FCLASS=0" >> "$wvdial_conf"
-    echo "Init3 = AT+CGDCONT=1,\"IP\",\"internet\"" >> "$wvdial_conf"
-    echo "Stupid Mode = 1" >> "$wvdial_conf"
-    echo "Modem Type = Analog Modem" >> "$wvdial_conf"
-    echo "ISDN = 0" >> "$wvdial_conf"
-    echo "Phone = *99#" >> "$wvdial_conf"
-    echo "Modem = /dev/gsmmodem" >> "$wvdial_conf"
-    echo "Username = $gsm_network_username" >> "$wvdial_conf"
-    echo "Password = $gsm_network_password" >> "$wvdial_conf"
-    echo "Baud = $gsm_network_baud" >> "$wvdial_conf"
+    {
+        echo "[Dialer $gsm_network_provider]"
+        echo "Init1 = ATZ"
+        echo "Init2 = ATQ0 V1 E1 S0=0 &C1 &D2 +FCLASS=0"
+        echo "Init3 = AT+CGDCONT=1,\"IP\",\"internet\""
+        echo "Stupid Mode = 1"
+        echo "Modem Type = Analog Modem"
+        echo "ISDN = 0"
+        echo "Phone = *99#"
+        echo "Modem = /dev/gsmmodem"
+        echo "Username = $gsm_network_username"
+        echo "Password = $gsm_network_password"
+        echo "Baud = $gsm_network_baud"
+    } >> "$wvdial_conf"
 fi
 
 unmount_ext4

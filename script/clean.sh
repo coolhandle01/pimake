@@ -4,13 +4,13 @@ source script/common/common.sh
 header "$0"
 
 msg "clean up build directories"
-rm -rf $workspace_dir/build/*
-rm -rf $workspace_dir/img/*
-rm -rf $workspace_dir/mnt/*
+rm -rf "${workspace_dir:?}/build/"*
+rm -rf "${workspace_dir:?}/img/"*
+rm -rf "${workspace_dir:?}/mnt/"*
 
 if [ "$1" = "-f" ] || [ "$1" = "--fresh" ]; then
   msg "clean up packages"
-  rm -rf $workspace_dir/package/*
+  rm -rf "${workspace_dir:?}/package/"*
 
   msg "clean up local configuration file"
   rm -f conf/pimake.local

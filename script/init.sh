@@ -4,10 +4,10 @@ source script/common/common.sh
 header "$0"
 
 msg "creating workspace"
-mkdir -p $workspace_dir/build
-mkdir -p $workspace_dir/img
-mkdir -p $workspace_dir/mnt
-mkdir -p $workspace_dir/package
+mkdir -p "$workspace_dir/build"
+mkdir -p "$workspace_dir/img"
+mkdir -p "$workspace_dir/mnt"
+mkdir -p "$workspace_dir/package"
 
 msg "creating local configuration file"
 cp conf/pimake.conf conf/pimake.local
