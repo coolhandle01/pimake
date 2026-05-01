@@ -4,10 +4,14 @@ source script/common/common.sh
 header "$0"
 
 #
-# unpack the raspian image
+# unpack the raspbian image
 #
 
 msg "decompressing $package"
-unzip "$package" -d "$workspace_dir/img"
+case "$package" in
+    *.zip) unzip "$package" -d "$workspace_dir/img" ;;
+    *.xz)  xz -dc "$package" > "$image" ;;
+    *)     errr "unsupported archive format: $package"; exit 1 ;;
+esac
 
 exit 0
