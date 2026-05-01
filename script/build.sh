@@ -47,6 +47,40 @@ if [ "$hdmi_install_enabled" -eq 1 ]; then
     } >> "$target_conf"
 fi
 
+if [ "$user_configure_enabled" -eq 1 ]; then
+    title "configure first-boot user ($userconf_mechanism)"
+    case "$userconf_mechanism" in
+        userconf_txt)
+            hashed=$(openssl passwd -6 "$user_password")
+            echo "$user_name:$hashed" > "$target_boot/userconf.txt"
+            msg "wrote userconf.txt for $user_name"
+            ;;
+        cloud_init)
+            hashed=$(openssl passwd -6 "$user_password")
+            {
+                echo "#cloud-config"
+                echo "users:"
+                echo "  - name: $user_name"
+                echo "    sudo: ALL=(ALL) NOPASSWD:ALL"
+                echo "    groups: sudo,adm"
+                echo "    lock_passwd: false"
+                echo "    passwd: $hashed"
+                if [ -n "$user_ssh_public_key" ]; then
+                    echo "    ssh_authorized_keys:"
+                    echo "      - $user_ssh_public_key"
+                fi
+            } > "$target_boot/user-data"
+            msg "wrote cloud-init user-data for $user_name"
+            ;;
+        none)
+            warn "$source_image_distro does not support build-time user provisioning"
+            ;;
+        *)
+            warn "unknown userconf_mechanism '$userconf_mechanism'"
+            ;;
+    esac
+fi
+
 unmount_vfat
 
 mount_ext4
@@ -73,6 +107,20 @@ if [ "$wpa_network_enabled" -eq 1 ]; then
         echo "    psk=$wpa_network_password"
         echo "}"
     } >> "$wpa_conf"
+fi
+
+if [ "$user_configure_enabled" -eq 1 ] && [ "$userconf_mechanism" = "userconf_txt" ] && [ -n "$user_ssh_public_key" ]; then
+    title "inject SSH public key"
+    ssh_dir="$target_root/home/$user_name/.ssh"
+    mkdir -p "$ssh_dir"
+    echo "$user_ssh_public_key" > "$ssh_dir/authorized_keys"
+    chmod 700 "$ssh_dir"
+    chmod 600 "$ssh_dir/authorized_keys"
+    # user created on first boot; RPi OS assigns UID/GID 1000 to the first user
+    chown -R 1000:1000 "$target_root/home/$user_name"
+    sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' \
+        "$target_root/etc/ssh/sshd_config"
+    msg "injected SSH public key, disabled password authentication"
 fi
 
 if [ "$gsm_network_enabled" -eq 1 ]; then
