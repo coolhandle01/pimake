@@ -63,6 +63,8 @@ if [ "$user_configure_enabled" -eq 1 ]; then
                 echo "  - name: $user_name"
                 echo "    sudo: ALL=(ALL) NOPASSWD:ALL"
                 echo "    groups: sudo,adm"
+                # passwd expects a pre-hashed value; lock_passwd: false is required
+                # or cloud-init leaves the account locked even with a valid hash
                 echo "    lock_passwd: false"
                 echo "    passwd: $hashed"
                 if [ -n "$user_ssh_public_key" ]; then
