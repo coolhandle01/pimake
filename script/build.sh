@@ -100,6 +100,8 @@ if [ "$wpa_network_enabled" -eq 1 ]; then
     title "configure WiFi"
     mkdir -p "$target_root/etc/wpa_supplicant"
     {
+        echo "ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev"
+        echo "update_config=1"
         echo "country=$wpa_network_locale"
         echo "network={"
         echo "    scan_ssid=1"
