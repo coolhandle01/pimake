@@ -12,6 +12,7 @@ header "$0"
 check_user root
 
 cleanup() {
+    # shellcheck disable=SC2317
     [ -n "$LODEV" ] && losetup -d "$LODEV"
 }
 trap cleanup EXIT
