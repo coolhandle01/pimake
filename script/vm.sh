@@ -6,10 +6,10 @@ vm_usage() {
     echo "Usage: pimake vm <subcommand> [args]"
     echo ""
     echo "Subcommands:"
-    echo "  start    Launch image in QEMU (--desktop for GUI window)"
-    echo "  stop     Stop a running QEMU instance [name]"
-    echo "  list     List all QEMU instances and their status"
-    echo "  show     Show details of a QEMU instance <name>"
+    echo "  start              Launch image in QEMU (--desktop for GUI window)"
+    echo "  stop  --pid <pid>  Stop a running QEMU instance"
+    echo "  list               List all QEMU instances and their status"
+    echo "  show  --pid <pid>  Show details of a QEMU instance"
 }
 
 vm_start() {
@@ -39,71 +39,71 @@ vm_start() {
         exit 1
     fi
 
-    if qemu_is_running; then
-        warn "$source_image_name is already running"
-        msg  "  use: pimake vm stop  or  pimake vm show"
-        exit 1
-    fi
-
-    local _ssh_port="${qemu_ssh_port:-5022}"
-    local dir; dir="$(qemu_dir)"
+    local boot_dir="$workspace_dir/qemu/boot"
 
     qemu_extract_boot || exit 1
 
-    title "starting QEMU ($qemu_machine, ${qemu_memory}M, SSH -> localhost:${_ssh_port})"
+    local _port; _port=$(qemu_find_free_port)
+
+    title "starting QEMU ($qemu_machine, ${qemu_memory}M, SSH -> localhost:${_port})"
 
     qemu-system-arm \
-        -M      "$qemu_machine" \
-        -m      "${qemu_memory}" \
-        -sd     "$image" \
-        -kernel "$dir/kernel.img" \
-        -dtb    "$dir/board.dtb" \
-        -append "rw earlyprintk loglevel=8 console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootwait" \
-        -net    nic \
-        -net    "user,hostfwd=tcp::${_ssh_port}-:22" \
-        -serial stdio \
+        -M        "$qemu_machine" \
+        -m        "${qemu_memory}" \
+        -sd       "$image" \
+        -snapshot \
+        -kernel   "$boot_dir/kernel.img" \
+        -dtb      "$boot_dir/board.dtb" \
+        -append   "rw earlyprintk loglevel=8 console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootwait" \
+        -net      nic \
+        -net      "user,hostfwd=tcp::${_port}-:22" \
+        -serial   stdio \
         "${display_opts[@]}" \
         &>/dev/null &
 
-    local _qemu_pid=$!
-    qemu_write_state "$_qemu_pid" "$_ssh_port"
+    local _pid=$!
+    qemu_write_state "$_pid" "$_port"
 
     sleep 1
-    if ! kill -0 "$_qemu_pid" 2>/dev/null; then
+    if ! qemu_is_running "$_pid"; then
         errr "QEMU exited immediately — check image and config"
-        rm -f "$dir/run.state"
+        rm -f "$(qemu_state_file "$_pid")"
         exit 1
     fi
 
-    okmsg "started (pid $_qemu_pid)"
-    msg   "  connect: ssh -p $_ssh_port pi@localhost"
-    msg   "  stop:    pimake vm stop"
+    okmsg "started (pid $_pid)"
+    msg   "  connect: ssh -p $_port pi@localhost"
+    msg   "  stop:    pimake vm stop --pid $_pid"
 }
 
 vm_stop() {
     header "vm stop"
 
-    local name="${1:-$source_image_name}"
-    local state_file="$workspace_dir/qemu/$name/run.state"
-
-    if [ ! -f "$state_file" ]; then
-        warn "$name is not running"
-        exit 0
+    local _pid=""
+    if [ "${1:-}" = "--pid" ] && [ -n "${2:-}" ]; then
+        _pid="$2"
+    else
+        errr "usage: pimake vm stop --pid <pid>"
+        msg  "  run: pimake vm list  to see running instances"
+        exit 1
     fi
 
-    qemu_pid=""
-    # shellcheck source=/dev/null
-    source "$state_file"
+    local state_file; state_file="$(qemu_state_file "$_pid")"
 
-    if ! kill -0 "$qemu_pid" 2>/dev/null; then
-        warn "$name is not running (stale state removed)"
+    if [ ! -f "$state_file" ]; then
+        warn "no state found for pid $_pid"
+        exit 1
+    fi
+
+    if ! qemu_is_running "$_pid"; then
+        warn "pid $_pid is not running (removing stale state)"
         rm -f "$state_file"
         exit 0
     fi
 
-    title "stopping QEMU (pid $qemu_pid)"
-    kill "$qemu_pid"
-    wait "$qemu_pid" 2>/dev/null
+    title "stopping QEMU (pid $_pid)"
+    kill "$_pid"
+    wait "$_pid" 2>/dev/null
     rm -f "$state_file"
     okmsg "stopped"
 }
@@ -111,28 +111,22 @@ vm_stop() {
 vm_list() {
     header "vm list"
 
-    local qemu_base="$workspace_dir/qemu"
-
-    if [ ! -d "$qemu_base" ]; then
-        msg "no instances found"
-        return 0
-    fi
-
     local found=0
-    printf "%-40s  %-8s  %s\n" "NAME" "STATUS" "SSH PORT"
+    printf "%-7s  %-36s  %-8s  %s\n" "PID" "IMAGE" "STATUS" "SSH PORT"
 
-    for state_file in "$qemu_base"/*/run.state; do
+    for state_file in "$workspace_dir/qemu/"*.state; do
         [ -f "$state_file" ] || continue
         found=1
-        # shellcheck source=/dev/null
         (
+            qemu_pid="" qemu_ssh_port=""
+            # shellcheck source=/dev/null
             source "$state_file"
-            if kill -0 "$qemu_pid" 2>/dev/null; then
+            if qemu_is_running "$qemu_pid"; then
                 _status="running"
             else
                 _status="stopped"
             fi
-            printf "%-40s  %-8s  %s\n" "$source_image_name" "$_status" "$qemu_ssh_port"
+            printf "%-7s  %-36s  %-8s  %s\n" "$qemu_pid" "$source_image_name" "$_status" "$qemu_ssh_port"
         )
     done
 
@@ -144,36 +138,37 @@ vm_list() {
 vm_show() {
     header "vm show"
 
-    if [ -z "${1:-}" ]; then
-        errr "usage: pimake vm show <name>"
+    local _pid=""
+    if [ "${1:-}" = "--pid" ] && [ -n "${2:-}" ]; then
+        _pid="$2"
+    else
+        errr "usage: pimake vm show --pid <pid>"
         msg  "  run: pimake vm list  to see available instances"
         exit 1
     fi
 
-    local name="$1"
-    local state_file="$workspace_dir/qemu/$name/run.state"
+    local state_file; state_file="$(qemu_state_file "$_pid")"
 
     if [ ! -f "$state_file" ]; then
-        warn "no state found for $name"
-        msg  "  run: pimake vm list  to see available instances"
+        warn "no state found for pid $_pid"
         exit 1
     fi
 
-    qemu_pid="" qemu_machine="" qemu_memory="" qemu_ssh_port="" started_at=""
+    qemu_pid="" qemu_machine="" qemu_memory="" qemu_ssh_port="" started_at="" source_image_name="" source_image_distro=""
     # shellcheck source=/dev/null
     source "$state_file"
 
     local _status="stopped"
-    if kill -0 "$qemu_pid" 2>/dev/null; then
+    if qemu_is_running "$qemu_pid"; then
         _status="running"
     fi
 
     title "$source_image_name"
+    msg "  pid:      $qemu_pid"
     msg "  distro:   $source_image_distro"
     msg "  machine:  $qemu_machine"
     msg "  memory:   ${qemu_memory}M"
     msg "  ssh:      ssh -p $qemu_ssh_port pi@localhost"
-    msg "  pid:      $qemu_pid"
     msg "  status:   $_status"
     msg "  started:  $started_at"
 }

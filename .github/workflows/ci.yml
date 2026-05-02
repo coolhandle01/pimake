@@ -120,27 +120,28 @@ jobs:
       - name: build
         run: sudo ./pimake build
 
-      - name: get image name
-        id: image
-        run: |
-          source "conf/distro/${{ env.DISTRO }}/index.conf"
-          echo "name=${source_image_name}" >> "$GITHUB_OUTPUT"
-
       - name: start VM
-        run: ./pimake vm start
+        run: |
+          output=$(./pimake vm start)
+          echo "$output"
+          pid=$(echo "$output" | grep -o 'pid [0-9]*' | grep -o '[0-9]*')
+          echo "VM_PID=$pid" >> "$GITHUB_ENV"
 
       - name: list VMs
         run: ./pimake vm list
 
       - name: show VM
-        run: ./pimake vm show ${{ steps.image.outputs.name }}
+        run: ./pimake vm show --pid "$VM_PID"
 
       - name: verify still running after 10s
         run: |
           sleep 10
           ./pimake vm list
-          ./pimake vm show ${{ steps.image.outputs.name }}
+          ./pimake vm show --pid "$VM_PID"
 
       - name: stop VM
         if: always()
-        run: ./pimake vm stop || true
+        run: |
+          if [ -n "${VM_PID:-}" ]; then
+            ./pimake vm stop --pid "$VM_PID" || true
+          fi
