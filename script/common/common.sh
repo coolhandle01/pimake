@@ -42,6 +42,34 @@ function okmsg() {
     echo -e "# ${GREEN}${BOLD}$1${NC}${NORM}"
 }
 
+# Returns SIZE and MODEL for a block device, space-separated.
+function device_info() {
+    lsblk -d -o SIZE,MODEL --noheadings "$1" 2>/dev/null | xargs
+}
+
+# Lists removable block devices and prompts the user to choose one.
+# Sets the global variable $selected_device on success; returns 1 if none found.
+function pick_removable_device() {
+    local -a _devs
+    mapfile -t _devs < <(lsblk -d -o NAME,RM --noheadings 2>/dev/null | awk '$2 == 1 {print $1}')
+    if [ ${#_devs[@]} -eq 0 ]; then
+        errr "No removable block devices found. Insert your SD card or use --device /dev/sdX."
+        return 1
+    fi
+    title "Available removable devices:"
+    for i in "${!_devs[@]}"; do
+        msg "  $((i+1)))  /dev/${_devs[$i]}  $(device_info "/dev/${_devs[$i]}")"
+    done
+    echo ""
+    echo -en "# Enter number [1-${#_devs[@]}] or device path: "
+    read -r _pick
+    if [[ "$_pick" =~ ^[0-9]+$ ]] && [ "$_pick" -ge 1 ] && [ "$_pick" -le "${#_devs[@]}" ]; then
+        selected_device="/dev/${_devs[$((_pick - 1))]}"
+    else
+        selected_device="$_pick"
+    fi
+}
+
 function check_user() {
     if [ "$(whoami)" = "$1" ]; then
         return 1
