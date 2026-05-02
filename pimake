@@ -11,8 +11,8 @@ usage() {
     echo "  unpack   Extract image archive"
     echo "  build    Mount and configure image (requires sudo)"
     echo "  pack     Recompress image"
-    echo "  burn     Flash image to disk"
-    echo "  rip      Extract image from existing disk"
+    echo "  burn     Flash image to disk (prompts for device; use --device /dev/sdX to skip)"
+    echo "  rip      Extract image from existing disk (prompts for device; use --device /dev/sdX to skip)"
     echo "  clean    Remove build artifacts (--fresh to reset all)"
 }
 
