@@ -96,6 +96,9 @@ jobs:
       - name: Install QEMU and mtools
         run: sudo apt-get install -y qemu-system-arm mtools
 
+      - name: generate SSH key
+        run: ssh-keygen -t ed25519 -N "" -f ci_key
+
       - name: init workspace
         run: |
           ./pimake init
@@ -104,6 +107,7 @@ jobs:
           sed -i 's/^user_configure_enabled=.*/user_configure_enabled=1/' conf/pimake.local
           sed -i 's/^user_name=.*/user_name=pimake/' conf/pimake.local
           sed -i 's/^user_password=.*/user_password=testpassword/' conf/pimake.local
+          echo "user_ssh_public_key=\"$(cat ci_key.pub)\"" >> conf/pimake.local
 
       - name: Cache image package
         uses: actions/cache@v4
@@ -121,11 +125,13 @@ jobs:
         run: sudo ./pimake build
 
       - name: start VM
+        run: ./pimake vm start
+
+      - name: capture VM info
         run: |
-          output=$(./pimake vm start)
-          echo "$output"
-          pid=$(echo "$output" | grep -o 'pid [0-9]*' | grep -o '[0-9]*')
-          echo "VM_PID=$pid" >> "$GITHUB_ENV"
+          state=$(ls -t workspace/qemu/*.state | head -1)
+          echo "VM_PID=$(grep '^qemu_pid=' "$state" | cut -d= -f2)" >> "$GITHUB_ENV"
+          echo "VM_SSH_PORT=$(grep '^qemu_ssh_port=' "$state" | cut -d= -f2)" >> "$GITHUB_ENV"
 
       - name: list VMs
         run: ./pimake vm list
@@ -133,11 +139,24 @@ jobs:
       - name: show VM
         run: ./pimake vm show --pid "$VM_PID"
 
-      - name: verify still running after 10s
+      - name: wait for SSH and smoke test
         run: |
-          sleep 10
-          ./pimake vm list
-          ./pimake vm show --pid "$VM_PID"
+          echo "waiting for SSH on port $VM_SSH_PORT..."
+          for i in $(seq 1 60); do
+            if ssh -i ci_key \
+                   -o StrictHostKeyChecking=no \
+                   -o BatchMode=yes \
+                   -o ConnectTimeout=5 \
+                   -p "$VM_SSH_PORT" \
+                   pimake@localhost 'uname -a && cat /etc/os-release' 2>/dev/null; then
+              echo "SSH smoke test passed after $((i * 5))s"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Timeout: SSH not available after 5 minutes" >&2
+          cat workspace/qemu/qemu-"${VM_SSH_PORT}".log >&2
+          exit 1
 
       - name: stop VM
         if: always()

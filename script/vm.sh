@@ -47,6 +47,11 @@ vm_start() {
 
     title "starting QEMU ($qemu_machine, ${qemu_memory}M, SSH -> localhost:${_port})"
 
+    # Reserve the state file slot before forking so qemu_find_free_port
+    # won't double-assign this port if vm start is called again immediately.
+    local _pid_tmp="$$-pending"
+    qemu_write_state "$_pid_tmp" "$_port"
+
     qemu-system-arm \
         -M        "$qemu_machine" \
         -m        "${qemu_memory}" \
@@ -57,17 +62,18 @@ vm_start() {
         -append   "rw earlyprintk loglevel=8 console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootwait" \
         -net      nic \
         -net      "user,hostfwd=tcp::${_port}-:22" \
-        -serial   stdio \
         "${display_opts[@]}" \
-        &>/dev/null &
+        < /dev/null >> "$workspace_dir/qemu/qemu-${_port}.log" 2>&1 &
 
     local _pid=$!
+    rm -f "$(qemu_state_file "$_pid_tmp")"
     qemu_write_state "$_pid" "$_port"
 
-    sleep 1
+    sleep 2
     if ! qemu_is_running "$_pid"; then
-        errr "QEMU exited immediately — check image and config"
-        rm -f "$(qemu_state_file "$_pid")"
+        errr "QEMU exited immediately — log:"
+        cat "$workspace_dir/qemu/qemu-${_port}.log" >&2
+        rm -f "$(qemu_state_file "$_pid")" "$workspace_dir/qemu/qemu-${_port}.log"
         exit 1
     fi
 
@@ -101,10 +107,14 @@ vm_stop() {
         exit 0
     fi
 
+    qemu_pid="" qemu_ssh_port=""
+    # shellcheck source=/dev/null
+    source "$state_file"
+
     title "stopping QEMU (pid $_pid)"
     kill "$_pid"
     wait "$_pid" 2>/dev/null
-    rm -f "$state_file"
+    rm -f "$state_file" "$workspace_dir/qemu/qemu-${qemu_ssh_port}.log"
     okmsg "stopped"
 }
 
