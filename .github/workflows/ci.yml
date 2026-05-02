@@ -120,6 +120,12 @@ jobs:
       - name: build
         run: sudo ./pimake build
 
+      - name: get image name
+        id: image
+        run: |
+          source "conf/distro/${{ env.DISTRO }}/index.conf"
+          echo "name=${source_image_name}" >> "$GITHUB_OUTPUT"
+
       - name: start VM
         run: ./pimake vm start
 
@@ -127,13 +133,13 @@ jobs:
         run: ./pimake vm list
 
       - name: show VM
-        run: ./pimake vm show
+        run: ./pimake vm show ${{ steps.image.outputs.name }}
 
       - name: verify still running after 10s
         run: |
           sleep 10
           ./pimake vm list
-          ./pimake vm show
+          ./pimake vm show ${{ steps.image.outputs.name }}
 
       - name: stop VM
         if: always()

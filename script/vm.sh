@@ -9,7 +9,7 @@ vm_usage() {
     echo "  start    Launch image in QEMU (--desktop for GUI window)"
     echo "  stop     Stop a running QEMU instance [name]"
     echo "  list     List all QEMU instances and their status"
-    echo "  show     Show details of a QEMU instance [name]"
+    echo "  show     Show details of a QEMU instance <name>"
 }
 
 vm_start() {
@@ -144,12 +144,18 @@ vm_list() {
 vm_show() {
     header "vm show"
 
-    local name="${1:-$source_image_name}"
+    if [ -z "${1:-}" ]; then
+        errr "usage: pimake vm show <name>"
+        msg  "  run: pimake vm list  to see available instances"
+        exit 1
+    fi
+
+    local name="$1"
     local state_file="$workspace_dir/qemu/$name/run.state"
 
     if [ ! -f "$state_file" ]; then
         warn "no state found for $name"
-        msg  "  run: pimake vm start"
+        msg  "  run: pimake vm list  to see available instances"
         exit 1
     fi
 
