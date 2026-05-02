@@ -84,3 +84,57 @@ jobs:
         with:
           name: ${{ steps.image.outputs.archive }}
           path: workspace/build/${{ steps.image.outputs.archive }}
+
+  emulate:
+    name: Emulate raspbian-lite
+    runs-on: ubuntu-latest
+    env:
+      DISTRO: raspbian-lite
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install QEMU and mtools
+        run: sudo apt-get install -y qemu-system-arm mtools
+
+      - name: init workspace
+        run: |
+          ./pimake init
+          sed -i "s/^source_image_distro=.*/source_image_distro=${{ env.DISTRO }}/" conf/pimake.local
+          sed -i 's/^ssh_configure_enabled=.*/ssh_configure_enabled=1/' conf/pimake.local
+          sed -i 's/^user_configure_enabled=.*/user_configure_enabled=1/' conf/pimake.local
+          sed -i 's/^user_name=.*/user_name=pimake/' conf/pimake.local
+          sed -i 's/^user_password=.*/user_password=testpassword/' conf/pimake.local
+
+      - name: Cache image package
+        uses: actions/cache@v4
+        with:
+          path: workspace/package
+          key: image-${{ env.DISTRO }}-${{ hashFiles(format('conf/distro/{0}/index.conf', env.DISTRO)) }}
+
+      - name: fetch
+        run: ./pimake fetch
+
+      - name: unpack
+        run: ./pimake unpack
+
+      - name: build
+        run: sudo ./pimake build
+
+      - name: start VM
+        run: ./pimake vm start
+
+      - name: list VMs
+        run: ./pimake vm list
+
+      - name: show VM
+        run: ./pimake vm show
+
+      - name: verify still running after 10s
+        run: |
+          sleep 10
+          ./pimake vm list
+          ./pimake vm show
+
+      - name: stop VM
+        if: always()
+        run: ./pimake vm stop || true
