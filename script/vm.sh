@@ -61,7 +61,7 @@ vm_start() {
         -kernel   "$boot_dir/kernel.img" \
         -dtb      "$boot_dir/board.dtb" \
         "${_initrd_opt[@]}" \
-        -append   "rw earlyprintk loglevel=8 console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootwait" \
+        -append   "rw loglevel=3 console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootwait" \
         -netdev   "user,id=net0,hostfwd=tcp::${_port}-:22" \
         -device   "usb-net,netdev=net0" \
         "${display_opts[@]}" \
