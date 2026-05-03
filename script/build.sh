@@ -96,17 +96,6 @@ if [ "$serial_console_enabled" -eq 1 ]; then
     title "configure serial console"
 fi
 
-if [ "$ssh_configure_enabled" -eq 1 ]; then
-    title "pre-generate SSH host keys"
-    mkdir -p "$target_root/etc/ssh"
-    ssh-keygen -A -f "$target_root" >/dev/null
-    # Mask the first-boot regeneration service so it doesn't delete these keys
-    # and stall waiting for entropy (critical for QEMU where /dev/hwrng is absent)
-    mkdir -p "$target_root/etc/systemd/system"
-    ln -sf /dev/null "$target_root/etc/systemd/system/regenerate_ssh_host_keys.service"
-    msg "pre-generated host keys, masked regenerate_ssh_host_keys.service"
-fi
-
 if [ "$wpa_network_enabled" -eq 1 ]; then
     title "configure WiFi"
     mkdir -p "$target_root/etc/wpa_supplicant"

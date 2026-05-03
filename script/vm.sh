@@ -57,11 +57,12 @@ vm_start() {
     "$qemu_binary" \
         -M        "$qemu_machine" \
         -m        "${qemu_memory}" \
+        -smp      4 \
         -sd       "$qemu_disk" \
         -kernel   "$boot_dir/kernel.img" \
         -dtb      "$boot_dir/board.dtb" \
         "${_initrd_opt[@]}" \
-        -append   "rw loglevel=3 console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootwait" \
+        -append   "rw loglevel=3 console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootwait systemd.mask=regenerate_ssh_host_keys.service" \
         -netdev   "user,id=net0,hostfwd=tcp::${_port}-:22" \
         -device   "usb-net,netdev=net0" \
         "${display_opts[@]}" \

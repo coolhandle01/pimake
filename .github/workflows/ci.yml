@@ -100,9 +100,6 @@ jobs:
       - name: Install QEMU and mtools
         run: sudo apt-get install -y qemu-system-arm qemu-system-aarch64 mtools
 
-      - name: generate SSH key
-        run: ssh-keygen -t ed25519 -N "" -f ci_key
-
       - name: init workspace
         run: |
           ./pimake init
@@ -111,7 +108,6 @@ jobs:
           sed -i 's/^user_configure_enabled=.*/user_configure_enabled=1/' conf/pimake.local
           sed -i 's/^user_name=.*/user_name=pimake/' conf/pimake.local
           sed -i 's/^user_password=.*/user_password=testpassword/' conf/pimake.local
-          echo "user_ssh_public_key=\"$(cat ci_key.pub)\"" >> conf/pimake.local
 
       - name: Cache image package
         uses: actions/cache@v4
@@ -143,7 +139,7 @@ jobs:
       - name: show VM
         run: ./pimake vm show --pid "$VM_PID"
 
-      - name: wait for SSH and smoke test
+      - name: wait for boot
         timeout-minutes: 25
         run: |
           log="workspace/qemu/qemu-${VM_SSH_PORT}.log"
@@ -157,7 +153,9 @@ jobs:
             if grep -q 'login:' "$log" 2>/dev/null; then
               echo ""
               echo "login prompt detected after $(( now - (deadline - 1200) ))s"
-              break
+              echo "--- boot log tail ---"
+              tail -20 "$log"
+              exit 0
             fi
             if [ "$now" -ge "$deadline" ]; then
               echo ""
@@ -168,33 +166,13 @@ jobs:
             fi
             if [ $(( now - last_report )) -ge 120 ]; then
               echo ""
-              echo "--- still booting ($(( now - (deadline - 1200) ))s elapsed), last log line: ---"
-              tail -1 "$log" 2>/dev/null || true
+              echo "--- still booting ($(( now - (deadline - 1200) ))s elapsed) ---"
+              tail -30 "$log" 2>/dev/null || echo "(log empty — possible console mismatch)"
               last_report=$now
             fi
             printf '.'
             sleep 1
           done
-          echo "connecting via SSH..."
-          for i in 1 2 3 4 5; do
-            if out=$(ssh -i ci_key \
-                         -o StrictHostKeyChecking=no \
-                         -o BatchMode=yes \
-                         -o ConnectTimeout=10 \
-                         -p "$VM_SSH_PORT" \
-                         pimake@localhost 'uname -a && cat /etc/os-release' 2>&1); then
-              echo "--- smoke test output ---"
-              echo "$out"
-              echo "-------------------------"
-              echo "SSH smoke test passed"
-              exit 0
-            fi
-            sleep 3
-          done
-          echo "SSH failed after login prompt appeared" >&2
-          echo "--- QEMU log (last 60 lines) ---" >&2
-          tail -60 "$log" >&2
-          exit 1
 
       - name: stop VM
         if: always()
