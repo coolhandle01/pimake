@@ -20,10 +20,10 @@ vm_start() {
         display_opts=(-display gtk)
     fi
 
-    for _cmd in qemu-system-arm qemu-img mtools sfdisk; do
+    for _cmd in "$qemu_binary" qemu-img mtools sfdisk; do
         if ! command -v "$_cmd" &>/dev/null; then
             errr "required command not found: $_cmd"
-            msg  "  install with: sudo apt-get install -y qemu-system-arm mtools"
+            msg  "  install with: sudo apt-get install -y qemu-system-arm qemu-system-aarch64 mtools"
             exit 1
         fi
     done
@@ -31,11 +31,6 @@ vm_start() {
     if [ ! -f "$image" ]; then
         errr "image not found: $image"
         msg  "  run: pimake fetch && pimake unpack (and optionally pimake build)"
-        exit 1
-    fi
-
-    if [ "$source_image_distro" = "ubuntu" ]; then
-        errr "ubuntu images are arm64 — needs qemu-system-aarch64 -M raspi3b (not yet supported)"
         exit 1
     fi
 
@@ -54,7 +49,7 @@ vm_start() {
     local _pid_tmp="$$-pending"
     qemu_write_state "$_pid_tmp" "$_port"
 
-    qemu-system-arm \
+    "$qemu_binary" \
         -M        "$qemu_machine" \
         -m        "${qemu_memory}" \
         -sd       "$qemu_disk" \
@@ -79,7 +74,7 @@ vm_start() {
     fi
 
     okmsg "started (pid $_pid)"
-    msg   "  connect: ssh -p $_port pi@localhost"
+    msg   "  connect: ssh -p $_port ${user_name:-pi}@localhost"
     msg   "  stop:    pimake vm stop --pid $_pid"
 }
 
@@ -181,7 +176,7 @@ vm_show() {
     msg "  distro:   $source_image_distro"
     msg "  machine:  $qemu_machine"
     msg "  memory:   ${qemu_memory}M"
-    msg "  ssh:      ssh -p $qemu_ssh_port pi@localhost"
+    msg "  ssh:      ssh -p $qemu_ssh_port ${user_name:-pi}@localhost"
     msg "  status:   $_status"
     msg "  started:  $started_at"
 }

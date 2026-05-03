@@ -63,8 +63,13 @@ qemu_extract_boot() {
 
     local offset=$(( boot_start * 512 ))
 
-    MTOOLS_SKIP_CHECK=1 mcopy -i "${image}@@${offset}" ::kernel7.img  "$boot_dir/kernel.img" || return 1
-    MTOOLS_SKIP_CHECK=1 mcopy -i "${image}@@${offset}" ::bcm2709-rpi-2-b.dtb "$boot_dir/board.dtb" || return 1
+    if [ "$source_image_distro" = "ubuntu" ]; then
+        MTOOLS_SKIP_CHECK=1 mcopy -i "${image}@@${offset}" ::kernel8.img "$boot_dir/kernel.img" || return 1
+        MTOOLS_SKIP_CHECK=1 mcopy -i "${image}@@${offset}" ::/dtb/broadcom/bcm2710-rpi-3-b-plus.dtb "$boot_dir/board.dtb" || return 1
+    else
+        MTOOLS_SKIP_CHECK=1 mcopy -i "${image}@@${offset}" ::kernel7.img "$boot_dir/kernel.img" || return 1
+        MTOOLS_SKIP_CHECK=1 mcopy -i "${image}@@${offset}" ::bcm2709-rpi-2-b.dtb "$boot_dir/board.dtb" || return 1
+    fi
 
     okmsg "kernel and DTB extracted"
 }
