@@ -73,15 +73,15 @@ qemu_extract_boot() {
         MTOOLS_SKIP_CHECK=1 mcopy -i "${image}@@${offset}" ::bcm2710-rpi-3-b-plus.dtb "$boot_dir/board.dtb" || return 1
         MTOOLS_SKIP_CHECK=1 mcopy -i "${image}@@${offset}" ::initrd.img "$boot_dir/initrd.img" || return 1
     else
-        MTOOLS_SKIP_CHECK=1 mcopy -i "${image}@@${offset}" ::kernel7.img "$boot_dir/kernel.img" || return 1
-        MTOOLS_SKIP_CHECK=1 mcopy -i "${image}@@${offset}" ::bcm2709-rpi-2-b.dtb "$boot_dir/board.dtb" || return 1
+        MTOOLS_SKIP_CHECK=1 mcopy -i "${image}@@${offset}" ::kernel8.img "$boot_dir/kernel.img" || return 1
+        MTOOLS_SKIP_CHECK=1 mcopy -i "${image}@@${offset}" ::bcm2710-rpi-3-b-plus.dtb "$boot_dir/board.dtb" || return 1
     fi
 
     okmsg "kernel and DTB extracted"
 }
 
 # Create a per-instance qcow2 overlay backed by $image, sized to the next
-# power-of-2 GiB (raspi2b requires a power-of-2 SD card size).
+# power-of-2 GiB (raspi3b requires a power-of-2 SD card size).
 # Sets the global $qemu_disk to the overlay path.
 qemu_prepare_disk() {
     local port=$1

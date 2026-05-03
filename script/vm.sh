@@ -23,7 +23,7 @@ vm_start() {
     for _cmd in "$qemu_binary" qemu-img mtools sfdisk; do
         if ! command -v "$_cmd" &>/dev/null; then
             errr "required command not found: $_cmd"
-            msg  "  install with: sudo apt-get install -y qemu-system-arm qemu-system-aarch64 mtools"
+            msg  "  install with: sudo apt-get install -y qemu-system-aarch64 mtools"
             exit 1
         fi
     done
