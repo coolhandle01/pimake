@@ -145,28 +145,33 @@ jobs:
 
       - name: wait for SSH and smoke test
         run: |
-          echo "waiting for SSH on port $VM_SSH_PORT (up to 10 min)..."
-          for i in $(seq 1 120); do
-            printf "[%3ds] trying SSH... " "$((i * 5))"
+          log="workspace/qemu/qemu-${VM_SSH_PORT}.log"
+          echo "waiting for guest login prompt in serial log (up to 10 min)..."
+          if ! timeout 600 grep -qm1 'login:' <(tail -f "$log" 2>/dev/null); then
+            echo "Timeout: guest never reached login prompt" >&2
+            echo "--- QEMU log ---" >&2
+            cat "$log" >&2
+            exit 1
+          fi
+          echo "login prompt detected — connecting via SSH..."
+          for i in 1 2 3 4 5; do
             if out=$(ssh -i ci_key \
                          -o StrictHostKeyChecking=no \
                          -o BatchMode=yes \
-                         -o ConnectTimeout=5 \
+                         -o ConnectTimeout=10 \
                          -p "$VM_SSH_PORT" \
                          pimake@localhost 'uname -a && cat /etc/os-release' 2>&1); then
-              echo "connected!"
               echo "--- smoke test output ---"
               echo "$out"
               echo "-------------------------"
-              echo "SSH smoke test passed after $((i * 5))s"
+              echo "SSH smoke test passed"
               exit 0
             fi
-            echo "not yet"
-            sleep 5
+            sleep 3
           done
-          echo "Timeout: SSH not available after 10 minutes" >&2
+          echo "SSH failed after login prompt appeared" >&2
           echo "--- QEMU log ---" >&2
-          cat workspace/qemu/qemu-"${VM_SSH_PORT}".log >&2
+          cat "$log" >&2
           exit 1
 
       - name: stop VM
