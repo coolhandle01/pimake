@@ -64,7 +64,6 @@ vm_start() {
         -append   "rw loglevel=3 console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootwait" \
         -netdev   "user,id=net0,hostfwd=tcp::${_port}-:22" \
         -device   "usb-net,netdev=net0" \
-        -device   "virtio-rng-device" \
         "${display_opts[@]}" \
         < /dev/null >> "$workspace_dir/qemu/qemu-${_port}.log" 2>&1 &
 
