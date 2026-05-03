@@ -20,7 +20,7 @@ vm_start() {
         display_opts=(-display gtk)
     fi
 
-    for _cmd in qemu-system-arm mtools sfdisk; do
+    for _cmd in qemu-system-arm qemu-img mtools sfdisk; do
         if ! command -v "$_cmd" &>/dev/null; then
             errr "required command not found: $_cmd"
             msg  "  install with: sudo apt-get install -y qemu-system-arm mtools"
@@ -45,6 +45,8 @@ vm_start() {
 
     local _port; _port=$(qemu_find_free_port)
 
+    qemu_prepare_disk "$_port" || exit 1
+
     title "starting QEMU ($qemu_machine, ${qemu_memory}M, SSH -> localhost:${_port})"
 
     # Reserve the state file slot before forking so qemu_find_free_port
@@ -55,8 +57,7 @@ vm_start() {
     qemu-system-arm \
         -M        "$qemu_machine" \
         -m        "${qemu_memory}" \
-        -sd       "$image" \
-        -snapshot \
+        -sd       "$qemu_disk" \
         -kernel   "$boot_dir/kernel.img" \
         -dtb      "$boot_dir/board.dtb" \
         -append   "rw earlyprintk loglevel=8 console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootwait" \
@@ -114,7 +115,9 @@ vm_stop() {
     title "stopping QEMU (pid $_pid)"
     kill "$_pid"
     wait "$_pid" 2>/dev/null
-    rm -f "$state_file" "$workspace_dir/qemu/qemu-${qemu_ssh_port}.log"
+    rm -f "$state_file" \
+          "$workspace_dir/qemu/disk-${qemu_ssh_port}.qcow2" \
+          "$workspace_dir/qemu/qemu-${qemu_ssh_port}.log"
     okmsg "stopped"
 }
 

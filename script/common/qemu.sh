@@ -68,3 +68,24 @@ qemu_extract_boot() {
 
     okmsg "kernel and DTB extracted"
 }
+
+# Create a per-instance qcow2 overlay backed by $image, sized to the next
+# power-of-2 GiB (raspi2b requires a power-of-2 SD card size).
+# Sets the global $qemu_disk to the overlay path.
+qemu_prepare_disk() {
+    local port=$1
+    local disk="$workspace_dir/qemu/disk-${port}.qcow2"
+
+    local size_bytes; size_bytes=$(stat -c%s "$image")
+    local gib=$(( (size_bytes + 1073741823) / 1073741824 ))
+    local p=1
+    while [ "$p" -lt "$gib" ]; do p=$(( p * 2 )); done
+
+    qemu-img create -f qcow2 \
+        -b "$(realpath "$image")" -F raw \
+        "$disk" "${p}G" >/dev/null
+    check_error
+
+    # shellcheck disable=SC2034
+    qemu_disk="$disk"
+}
