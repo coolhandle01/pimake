@@ -148,14 +148,12 @@ jobs:
           echo "waiting for SSH on port $VM_SSH_PORT (up to 10 min)..."
           for i in $(seq 1 120); do
             printf "[%3ds] trying SSH... " "$((i * 5))"
-            out=$(ssh -i ci_key \
-                      -o StrictHostKeyChecking=no \
-                      -o BatchMode=yes \
-                      -o ConnectTimeout=5 \
-                      -p "$VM_SSH_PORT" \
-                      pimake@localhost 'uname -a && cat /etc/os-release' 2>&1)
-            rc=$?
-            if [ "$rc" -eq 0 ]; then
+            if out=$(ssh -i ci_key \
+                         -o StrictHostKeyChecking=no \
+                         -o BatchMode=yes \
+                         -o ConnectTimeout=5 \
+                         -p "$VM_SSH_PORT" \
+                         pimake@localhost 'uname -a && cat /etc/os-release' 2>&1); then
               echo "connected!"
               echo "--- smoke test output ---"
               echo "$out"
@@ -163,7 +161,7 @@ jobs:
               echo "SSH smoke test passed after $((i * 5))s"
               exit 0
             fi
-            echo "not yet (rc=$rc)"
+            echo "not yet"
             sleep 5
           done
           echo "Timeout: SSH not available after 10 minutes" >&2

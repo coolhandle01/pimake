@@ -49,12 +49,18 @@ vm_start() {
     local _pid_tmp="$$-pending"
     qemu_write_state "$_pid_tmp" "$_port"
 
+    local _initrd_opt=()
+    if [ -f "$boot_dir/initrd.img" ]; then
+        _initrd_opt=(-initrd "$boot_dir/initrd.img")
+    fi
+
     "$qemu_binary" \
         -M        "$qemu_machine" \
         -m        "${qemu_memory}" \
         -sd       "$qemu_disk" \
         -kernel   "$boot_dir/kernel.img" \
         -dtb      "$boot_dir/board.dtb" \
+        "${_initrd_opt[@]}" \
         -append   "rw earlyprintk loglevel=8 console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootwait" \
         -netdev   "user,id=net0,hostfwd=tcp::${_port}-:22" \
         -device   "usb-net,netdev=net0" \

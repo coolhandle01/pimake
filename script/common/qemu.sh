@@ -37,14 +37,18 @@ qemu_is_running() {
     kill -0 "$1" 2>/dev/null
 }
 
-# Extract kernel7.img and bcm2709-rpi-2-b.dtb from the image's boot partition
+# Extract kernel, DTB (and initrd for Ubuntu) from the image's boot partition
 # into workspace/qemu/boot/ using mtools — no sudo required.
 # Skips extraction if kernel.img is newer than the source image.
 qemu_extract_boot() {
     local boot_dir="$workspace_dir/qemu/boot"
     mkdir -p "$boot_dir"
 
-    if [ "$boot_dir/kernel.img" -nt "$image" ] && [ -f "$boot_dir/board.dtb" ]; then
+    local _need_initrd=0
+    [ "$source_image_distro" = "ubuntu" ] && _need_initrd=1
+
+    if [ "$boot_dir/kernel.img" -nt "$image" ] && [ -f "$boot_dir/board.dtb" ] \
+       && { [ "$_need_initrd" -eq 0 ] || [ -f "$boot_dir/initrd.img" ]; }; then
         okmsg "kernel and DTB already extracted"
         return 0
     fi
@@ -64,8 +68,10 @@ qemu_extract_boot() {
     local offset=$(( boot_start * 512 ))
 
     if [ "$source_image_distro" = "ubuntu" ]; then
-        MTOOLS_SKIP_CHECK=1 mcopy -i "${image}@@${offset}" ::kernel8.img "$boot_dir/kernel.img" || return 1
-        MTOOLS_SKIP_CHECK=1 mcopy -i "${image}@@${offset}" ::/dtb/broadcom/bcm2710-rpi-3-b-plus.dtb "$boot_dir/board.dtb" || return 1
+        # Ubuntu 24.04: kernel is vmlinuz, DTB is at FAT root, initrd is required
+        MTOOLS_SKIP_CHECK=1 mcopy -i "${image}@@${offset}" ::vmlinuz "$boot_dir/kernel.img" || return 1
+        MTOOLS_SKIP_CHECK=1 mcopy -i "${image}@@${offset}" ::bcm2710-rpi-3-b-plus.dtb "$boot_dir/board.dtb" || return 1
+        MTOOLS_SKIP_CHECK=1 mcopy -i "${image}@@${offset}" ::initrd.img "$boot_dir/initrd.img" || return 1
     else
         MTOOLS_SKIP_CHECK=1 mcopy -i "${image}@@${offset}" ::kernel7.img "$boot_dir/kernel.img" || return 1
         MTOOLS_SKIP_CHECK=1 mcopy -i "${image}@@${offset}" ::bcm2709-rpi-2-b.dtb "$boot_dir/board.dtb" || return 1
