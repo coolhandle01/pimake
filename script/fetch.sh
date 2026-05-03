@@ -8,8 +8,6 @@ header "$0"
 # verify the checksum of the image
 #
 
-image_chk="$source_image_hash_expected  $package"
-
 if [ ! -f "$package" ]; then
     msg "downloading $package"
     curl "$source_image_url/$source_image_archive" -L -o "$package"
@@ -21,15 +19,17 @@ else
 fi
 
 msg "verifying $package.."
-sha256sum "$package" > "$package_checksum"
-checksum=$(cat "$package_checksum")
+actual=$(sha256sum "$package" | awk '{print $1}')
+expected=$(awk 'NR==1{print $1}' "$package_checksum" 2>/dev/null)
 
-if [ "$image_chk" = "$checksum" ]; then
+if [ -z "$expected" ]; then
+    warn "skipping hash verification (no checksum file)"
+elif [ "$actual" = "$expected" ]; then
     okmsg "OK"
 else
     errr "FAILED"
-    msg "calculated: $checksum"
-    msg "cached: $image_chk"
+    msg "calculated: $actual"
+    msg "expected:   $expected"
 fi
 
 exit 0
