@@ -14,10 +14,11 @@ usage() {
     echo "  burn     Flash image to disk (prompts for device; use --device /dev/sdX to skip)"
     echo "  rip      Extract image from existing disk (prompts for device; use --device /dev/sdX to skip)"
     echo "  clean    Remove build artifacts (--fresh to reset all)"
+    echo "  vm       Manage QEMU virtual machines (start, stop, list, show)"
 }
 
 case "$1" in
-    init|fetch|unpack|build|pack|burn|rip|clean)
+    init|fetch|unpack|build|pack|burn|rip|clean|vm)
         command=$1
         shift
         cd "$PIMAKE_DIR" || exit

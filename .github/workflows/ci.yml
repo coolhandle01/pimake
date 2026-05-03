@@ -84,3 +84,120 @@ jobs:
         with:
           name: ${{ steps.image.outputs.archive }}
           path: workspace/build/${{ steps.image.outputs.archive }}
+
+  emulate:
+    name: Emulate ${{ matrix.distro }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: [raspbian-lite, ubuntu]
+    env:
+      DISTRO: ${{ matrix.distro }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install QEMU and mtools
+        run: sudo apt-get install -y qemu-system-arm qemu-system-aarch64 mtools
+
+      - name: generate SSH key
+        run: ssh-keygen -t ed25519 -N "" -f ci_key
+
+      - name: init workspace
+        run: |
+          ./pimake init
+          sed -i "s/^source_image_distro=.*/source_image_distro=${{ env.DISTRO }}/" conf/pimake.local
+          sed -i 's/^ssh_configure_enabled=.*/ssh_configure_enabled=1/' conf/pimake.local
+          sed -i 's/^user_configure_enabled=.*/user_configure_enabled=1/' conf/pimake.local
+          sed -i 's/^user_name=.*/user_name=pimake/' conf/pimake.local
+          sed -i 's/^user_password=.*/user_password=testpassword/' conf/pimake.local
+          echo "user_ssh_public_key=\"$(cat ci_key.pub)\"" >> conf/pimake.local
+
+      - name: Cache image package
+        uses: actions/cache@v4
+        with:
+          path: workspace/package
+          key: image-${{ env.DISTRO }}-${{ hashFiles(format('conf/distro/{0}/index.conf', env.DISTRO)) }}
+
+      - name: fetch
+        run: ./pimake fetch
+
+      - name: unpack
+        run: ./pimake unpack
+
+      - name: build
+        run: sudo ./pimake build
+
+      - name: start VM
+        run: ./pimake vm start
+
+      - name: capture VM info
+        run: |
+          state=$(ls -t workspace/qemu/*.state | head -1)
+          echo "VM_PID=$(grep '^qemu_pid=' "$state" | cut -d= -f2)" >> "$GITHUB_ENV"
+          echo "VM_SSH_PORT=$(grep '^qemu_ssh_port=' "$state" | cut -d= -f2)" >> "$GITHUB_ENV"
+
+      - name: list VMs
+        run: ./pimake vm list
+
+      - name: show VM
+        run: ./pimake vm show --pid "$VM_PID"
+
+      - name: wait for boot
+        timeout-minutes: 25
+        run: |
+          log="workspace/qemu/qemu-${VM_SSH_PORT}.log"
+          echo "=== QEMU log so far ==="
+          cat "$log" 2>/dev/null || true
+          echo "=== polling for login prompt (up to 20 min) ==="
+          deadline=$(( $(date +%s) + 1200 ))
+          last_report=0
+          while true; do
+            now=$(date +%s)
+            if grep -q 'login:' "$log" 2>/dev/null; then
+              echo ""
+              echo "login prompt detected after $(( now - (deadline - 1200) ))s"
+              echo "--- boot log tail ---"
+              tail -20 "$log"
+              echo "--- connecting via SSH ---"
+              for i in 1 2 3 4 5; do
+                if out=$(ssh -i ci_key \
+                             -o StrictHostKeyChecking=no \
+                             -o BatchMode=yes \
+                             -o ConnectTimeout=10 \
+                             -p "$VM_SSH_PORT" \
+                             pimake@localhost 'uname -a && cat /etc/os-release' 2>&1); then
+                  echo "$out"
+                  echo "SSH smoke test passed"
+                  exit 0
+                fi
+                sleep 5
+              done
+              echo "SSH failed after login prompt appeared" >&2
+              echo "--- QEMU log (last 30 lines) ---" >&2
+              tail -30 "$log" >&2
+              exit 1
+            fi
+            if [ "$now" -ge "$deadline" ]; then
+              echo ""
+              echo "Timeout: guest never reached login prompt after 20 minutes" >&2
+              echo "--- QEMU log (last 60 lines) ---" >&2
+              tail -60 "$log" >&2
+              exit 1
+            fi
+            if [ $(( now - last_report )) -ge 120 ]; then
+              echo ""
+              echo "--- still booting ($(( now - (deadline - 1200) ))s elapsed) ---"
+              tail -30 "$log" 2>/dev/null || echo "(log empty — possible console mismatch)"
+              last_report=$now
+            fi
+            printf '.'
+            sleep 1
+          done
+
+      - name: stop VM
+        if: always()
+        run: |
+          if [ -n "${VM_PID:-}" ]; then
+            ./pimake vm stop --pid "$VM_PID" || true
+          fi
